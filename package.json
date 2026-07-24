@@ -1,0 +1,18 @@
+{
+  "name": "small-shop-pos",
+  "version": "1.0.0",
+  "description": "Small electronics and stationery shop POS system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.2.0",
+    "xlsx": "^0.18.5"
+  }
+}

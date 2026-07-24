@@ -1,2 +1,3 @@
 # Small-shop-pos
-Small web based pos system to log sales and track inventory 
+
+Small web based POS system to log sales and track inventory.

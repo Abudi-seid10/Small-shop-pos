@@ -24,7 +24,7 @@ const sampleProducts = [
   ['Lamination Service', 'Services', 35, 6, 0]
 ]
 
-export function initializeDatabase() {
+export async function initializeDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,11 +84,11 @@ export function initializeDatabase() {
     );
   `)
 
-  seedUsers()
+  await seedUsers()
   seedProducts()
 }
 
-function seedUsers() {
+async function seedUsers() {
   const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get().count
 
   if (userCount > 0) {
@@ -101,7 +101,7 @@ function seedUsers() {
     console.warn('DEFAULT_ADMIN_PASSWORD is not set. Seeding the documented default admin password.')
   }
 
-  const passwordHash = bcrypt.hashSync(defaultAdminPassword, 10)
+  const passwordHash = await bcrypt.hash(defaultAdminPassword, 10)
 
   db.prepare(
     `INSERT INTO users (username, password_hash, full_name, role)

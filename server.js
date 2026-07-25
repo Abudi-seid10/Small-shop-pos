@@ -2,7 +2,6 @@ import bcrypt from 'bcryptjs'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import jwt from 'jsonwebtoken'
-import { randomBytes } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, initializeDatabase, recalculateDailySummary } from './database.js'
@@ -12,8 +11,14 @@ const __dirname = path.dirname(__filename)
 const publicDir = path.join(__dirname, 'public')
 const app = express()
 const port = Number(process.env.PORT) || 3000
-const generatedJwtSecret = randomBytes(32).toString('hex')
-const jwtSecret = process.env.JWT_SECRET || generatedJwtSecret
+const localJwtSecret = 'small-shop-pos-local-development-secret'
+const jwtSecret =
+  process.env.JWT_SECRET ||
+  (process.env.NODE_ENV === 'production'
+    ? (() => {
+        throw new Error('JWT_SECRET must be set in production.')
+      })()
+    : localJwtSecret)
 const jwtExpiry = '24h'
 const productCategories = new Set(['Electronics', 'Stationery', 'Services'])
 const expenseCategories = new Set(['Rent', 'Utilities', 'Supplies', 'Salary', 'Other'])
@@ -45,10 +50,10 @@ const loginRateLimit = rateLimit({
   }
 })
 
-initializeDatabase()
+await initializeDatabase()
 
-if (!process.env.JWT_SECRET) {
-  console.warn('JWT_SECRET is not set. Generated a temporary in-memory secret for this session.')
+if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
+  console.warn('JWT_SECRET is not set. Using the local development fallback secret.')
 }
 
 app.use(express.json())
@@ -383,13 +388,15 @@ function generateInvoiceNumber() {
   return `${prefix}${nextSequence}`
 }
 
-app.post('/api/login', loginRateLimit, (req, res, next) => {
+app.post('/api/login', loginRateLimit, async (req, res, next) => {
   try {
     const username = requireString(req.body.username, 'Username').toLowerCase()
     const password = requireString(req.body.password, 'Password')
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username)
 
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    const passwordMatches = user ? await bcrypt.compare(password, user.password_hash) : false
+
+    if (!user || !passwordMatches) {
       throw createHttpError(401, 'Invalid username or password.')
     }
 
@@ -539,8 +546,9 @@ app.post('/api/sales', apiRateLimit, authenticate, (req, res, next) => {
           throw createHttpError(400, `Insufficient stock for ${product.name}.`)
         }
 
-        const subtotal = Number((product.selling_price * quantity).toFixed(2))
-        totalAmount += subtotal
+        const rawSubtotal = product.selling_price * quantity
+        const subtotal = Number(rawSubtotal.toFixed(2))
+        totalAmount += rawSubtotal
         lineItems.push({
           productId: product.id,
           productName: product.name,

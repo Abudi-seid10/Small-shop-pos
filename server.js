@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import express from 'express'
+import rateLimit from 'express-rate-limit'
 import jwt from 'jsonwebtoken'
 import { randomBytes } from 'node:crypto'
 import path from 'node:path'
@@ -17,9 +18,32 @@ const jwtExpiry = '24h'
 const productCategories = new Set(['Electronics', 'Stationery', 'Services'])
 const expenseCategories = new Set(['Rent', 'Utilities', 'Supplies', 'Salary', 'Other'])
 const paymentMethods = new Set(['Cash', 'Card', 'UPI'])
-const pageRateLimit = createRateLimiter({ windowMs: 60_000, maxRequests: 120 })
-const apiRateLimit = createRateLimiter({ windowMs: 60_000, maxRequests: 300 })
-const loginRateLimit = createRateLimiter({ windowMs: 15 * 60_000, maxRequests: 20 })
+const rateLimitMessage = 'Too many requests. Please try again shortly.'
+const pageRateLimit = rateLimit({
+  windowMs: 60_000,
+  limit: 120,
+  standardHeaders: false,
+  legacyHeaders: false,
+  message: rateLimitMessage
+})
+const apiRateLimit = rateLimit({
+  windowMs: 60_000,
+  limit: 300,
+  standardHeaders: false,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({ message: rateLimitMessage })
+  }
+})
+const loginRateLimit = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 20,
+  standardHeaders: false,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({ message: rateLimitMessage })
+  }
+})
 
 initializeDatabase()
 
@@ -51,33 +75,6 @@ function createHttpError(status, message) {
   const error = new Error(message)
   error.status = status
   return error
-}
-
-function createRateLimiter({ windowMs, maxRequests }) {
-  const requestLog = new Map()
-
-  return (req, res, next) => {
-    const now = Date.now()
-    const key = `${req.ip}:${req.path}`
-    const existingEntry = requestLog.get(key)
-    const recentRequests = (existingEntry ?? []).filter((timestamp) => now - timestamp < windowMs)
-
-    if (recentRequests.length >= maxRequests) {
-      const message = 'Too many requests. Please try again shortly.'
-
-      if (req.path.startsWith('/api')) {
-        res.status(429).json({ message })
-        return
-      }
-
-      res.status(429).type('text/plain').send(message)
-      return
-    }
-
-    recentRequests.push(now)
-    requestLog.set(key, recentRequests)
-    next()
-  }
 }
 
 function isValidDate(value) {
@@ -174,32 +171,135 @@ function requireAllowedValue(value, fieldName, allowedValues) {
   return normalizedValue
 }
 
-function getDateFilter(columnName, query) {
-  const exactDate = normalizeDate(query.date, 'date')
-  const startDate = normalizeDate(query.startDate, 'startDate')
-  const endDate = normalizeDate(query.endDate, 'endDate')
-  const clauses = []
-  const parameters = []
-
-  if (exactDate) {
-    clauses.push(`substr(${columnName}, 1, 10) = ?`)
-    parameters.push(exactDate)
-  } else {
-    if (startDate) {
-      clauses.push(`substr(${columnName}, 1, 10) >= ?`)
-      parameters.push(startDate)
-    }
-
-    if (endDate) {
-      clauses.push(`substr(${columnName}, 1, 10) <= ?`)
-      parameters.push(endDate)
-    }
-  }
-
+function resolveDateFilter(query) {
   return {
-    clause: clauses.length > 0 ? ` WHERE ${clauses.join(' AND ')}` : '',
-    parameters
+    exactDate: normalizeDate(query.date, 'date'),
+    startDate: normalizeDate(query.startDate, 'startDate'),
+    endDate: normalizeDate(query.endDate, 'endDate')
   }
+}
+
+function getSalesRows(filter) {
+  if (filter.exactDate) {
+    return db
+      .prepare(
+        `SELECT s.id, s.invoice_number, s.total_amount, s.payment_method, s.customer_name, s.timestamp,
+                u.full_name AS staff_name, u.username
+         FROM sales s
+         JOIN users u ON u.id = s.user_id
+         WHERE substr(s.timestamp, 1, 10) = ?
+         ORDER BY s.timestamp DESC, s.id DESC`
+      )
+      .all(filter.exactDate)
+  }
+
+  if (filter.startDate && filter.endDate) {
+    return db
+      .prepare(
+        `SELECT s.id, s.invoice_number, s.total_amount, s.payment_method, s.customer_name, s.timestamp,
+                u.full_name AS staff_name, u.username
+         FROM sales s
+         JOIN users u ON u.id = s.user_id
+         WHERE substr(s.timestamp, 1, 10) >= ? AND substr(s.timestamp, 1, 10) <= ?
+         ORDER BY s.timestamp DESC, s.id DESC`
+      )
+      .all(filter.startDate, filter.endDate)
+  }
+
+  if (filter.startDate) {
+    return db
+      .prepare(
+        `SELECT s.id, s.invoice_number, s.total_amount, s.payment_method, s.customer_name, s.timestamp,
+                u.full_name AS staff_name, u.username
+         FROM sales s
+         JOIN users u ON u.id = s.user_id
+         WHERE substr(s.timestamp, 1, 10) >= ?
+         ORDER BY s.timestamp DESC, s.id DESC`
+      )
+      .all(filter.startDate)
+  }
+
+  if (filter.endDate) {
+    return db
+      .prepare(
+        `SELECT s.id, s.invoice_number, s.total_amount, s.payment_method, s.customer_name, s.timestamp,
+                u.full_name AS staff_name, u.username
+         FROM sales s
+         JOIN users u ON u.id = s.user_id
+         WHERE substr(s.timestamp, 1, 10) <= ?
+         ORDER BY s.timestamp DESC, s.id DESC`
+      )
+      .all(filter.endDate)
+  }
+
+  return db
+    .prepare(
+      `SELECT s.id, s.invoice_number, s.total_amount, s.payment_method, s.customer_name, s.timestamp,
+              u.full_name AS staff_name, u.username
+       FROM sales s
+       JOIN users u ON u.id = s.user_id
+       ORDER BY s.timestamp DESC, s.id DESC`
+    )
+    .all()
+}
+
+function getExpenseRows(filter) {
+  if (filter.exactDate) {
+    return db
+      .prepare(
+        `SELECT e.id, e.description, e.amount, e.category, e.timestamp, u.full_name AS staff_name
+         FROM expenses e
+         JOIN users u ON u.id = e.user_id
+         WHERE substr(e.timestamp, 1, 10) = ?
+         ORDER BY e.timestamp DESC, e.id DESC`
+      )
+      .all(filter.exactDate)
+  }
+
+  if (filter.startDate && filter.endDate) {
+    return db
+      .prepare(
+        `SELECT e.id, e.description, e.amount, e.category, e.timestamp, u.full_name AS staff_name
+         FROM expenses e
+         JOIN users u ON u.id = e.user_id
+         WHERE substr(e.timestamp, 1, 10) >= ? AND substr(e.timestamp, 1, 10) <= ?
+         ORDER BY e.timestamp DESC, e.id DESC`
+      )
+      .all(filter.startDate, filter.endDate)
+  }
+
+  if (filter.startDate) {
+    return db
+      .prepare(
+        `SELECT e.id, e.description, e.amount, e.category, e.timestamp, u.full_name AS staff_name
+         FROM expenses e
+         JOIN users u ON u.id = e.user_id
+         WHERE substr(e.timestamp, 1, 10) >= ?
+         ORDER BY e.timestamp DESC, e.id DESC`
+      )
+      .all(filter.startDate)
+  }
+
+  if (filter.endDate) {
+    return db
+      .prepare(
+        `SELECT e.id, e.description, e.amount, e.category, e.timestamp, u.full_name AS staff_name
+         FROM expenses e
+         JOIN users u ON u.id = e.user_id
+         WHERE substr(e.timestamp, 1, 10) <= ?
+         ORDER BY e.timestamp DESC, e.id DESC`
+      )
+      .all(filter.endDate)
+  }
+
+  return db
+    .prepare(
+      `SELECT e.id, e.description, e.amount, e.category, e.timestamp, u.full_name AS staff_name
+       FROM expenses e
+       JOIN users u ON u.id = e.user_id
+       ORDER BY e.timestamp DESC, e.id DESC`
+    )
+    .all()
 }
 
 function authenticate(req, _res, next) {
@@ -232,39 +332,26 @@ function createToken(user) {
 }
 
 function buildSalesResponse(filterQuery) {
-  const filter = getDateFilter('s.timestamp', filterQuery)
-  const sales = db
-    .prepare(
-      `SELECT s.id, s.invoice_number, s.total_amount, s.payment_method, s.customer_name, s.timestamp,
-              u.full_name AS staff_name, u.username
-       FROM sales s
-       JOIN users u ON u.id = s.user_id
-       ${filter.clause}
-       ORDER BY s.timestamp DESC, s.id DESC`
-    )
-    .all(...filter.parameters)
+  const filter = resolveDateFilter(filterQuery)
+  const sales = getSalesRows(filter)
 
   if (sales.length === 0) {
     return []
   }
 
-  const saleIdPlaceholders = sales.map(() => '?').join(', ')
-  const items = db
-    .prepare(
-      `SELECT sale_id, product_name, quantity, unit_price, subtotal
-       FROM sale_items
-       WHERE sale_id IN (${saleIdPlaceholders})
-       ORDER BY id ASC`
-    )
-    .all(...sales.map((sale) => sale.id))
-
-  const itemsBySaleId = new Map()
-
-  for (const item of items) {
-    const existingItems = itemsBySaleId.get(item.sale_id) ?? []
-    existingItems.push(item)
-    itemsBySaleId.set(item.sale_id, existingItems)
-  }
+  const itemsBySaleId = new Map(
+    sales.map((sale) => [
+      sale.id,
+      db
+        .prepare(
+          `SELECT sale_id, product_name, quantity, unit_price, subtotal
+           FROM sale_items
+           WHERE sale_id = ?
+           ORDER BY id ASC`
+        )
+        .all(sale.id)
+    ])
+  )
 
   return sales.map((sale) => {
     const saleItems = itemsBySaleId.get(sale.id) ?? []
@@ -550,16 +637,7 @@ app.post('/api/expenses', apiRateLimit, authenticate, (req, res, next) => {
 
 app.get('/api/expenses', apiRateLimit, authenticate, (req, res, next) => {
   try {
-    const filter = getDateFilter('e.timestamp', req.query)
-    const expenses = db
-      .prepare(
-        `SELECT e.id, e.description, e.amount, e.category, e.timestamp, u.full_name AS staff_name
-         FROM expenses e
-         JOIN users u ON u.id = e.user_id
-         ${filter.clause}
-         ORDER BY e.timestamp DESC, e.id DESC`
-      )
-      .all(...filter.parameters)
+    const expenses = getExpenseRows(resolveDateFilter(req.query))
 
     res.json(expenses)
   } catch (error) {

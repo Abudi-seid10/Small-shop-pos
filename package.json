@@ -1,0 +1,24 @@
+{
+  "name": "small-shop-pos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "POS system for a small electronics and stationery shop",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "node --check server.js && node --check database.js && node --check public/script.js",
+    "lint": "oxlint ."
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.0",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "oxlint": "^1.71.0"
+  }
+}

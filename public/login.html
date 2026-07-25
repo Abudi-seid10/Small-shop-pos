@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Small Shop POS | Login</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body data-page="login">
+    <main class="login-shell">
+      <section class="login-card">
+        <div class="brand-block">
+          <p class="section-kicker">🛍️ Small Shop POS</p>
+          <h1>Welcome back</h1>
+          <p class="muted-text">Sign in to manage sales, stock, expenses, and reports.</p>
+        </div>
+
+        <div id="message" class="message hidden" role="alert"></div>
+
+        <form id="login-form" class="stack-form">
+          <label>
+            <span>Username</span>
+            <input type="text" name="username" placeholder="Enter your username" required />
+          </label>
+
+          <label>
+            <span>Password</span>
+            <input type="password" name="password" placeholder="Enter your password" required />
+          </label>
+
+          <button type="submit" class="primary-button">Login</button>
+        </form>
+
+        <div class="login-note">
+          <strong>Default admin:</strong>
+          <span>admin / admin123</span>
+        </div>
+      </section>
+    </main>
+
+    <script src="/script.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Small Shop POS | Dashboard</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body data-page="dashboard">
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <p>🛍️ Small Shop POS</p>
+          <span>Daily retail operations made simple</span>
+        </div>
+
+        <nav class="sidebar__nav">
+          <button type="button" class="nav-button active" data-view="pos-view">🧾 POS</button>
+          <button type="button" class="nav-button" data-view="sales-view">📜 Sales History</button>
+          <button type="button" class="nav-button" data-view="expenses-view">💸 Expenses</button>
+          <button type="button" class="nav-button" data-view="products-view">📦 Products</button>
+          <button type="button" class="nav-button" data-view="reports-view">📊 Reports</button>
+        </nav>
+
+        <div class="sidebar__footer">
+          <div>
+            <strong id="staff-name">-</strong>
+            <span id="staff-role">-</span>
+          </div>
+          <button type="button" id="logout-button" class="secondary-button full-width">Logout</button>
+        </div>
+      </aside>
+
+      <main class="content-area">
+        <header class="page-header">
+          <div>
+            <p class="section-kicker">Store dashboard</p>
+            <h1>Manage sales and operations</h1>
+          </div>
+          <div class="page-header__meta">
+            <span id="today-label"></span>
+          </div>
+        </header>
+
+        <div id="message" class="message hidden" role="alert"></div>
+
+        <section id="pos-view" class="view-section active">
+          <div class="section-header">
+            <div>
+              <h2>Point of Sale</h2>
+              <p>Search items, add them to the cart, and complete a sale.</p>
+            </div>
+          </div>
+
+          <div class="pos-layout">
+            <section class="panel">
+              <div class="panel__toolbar grid-toolbar">
+                <label>
+                  <span>Search products</span>
+                  <input id="product-search" type="search" placeholder="Search products or services" />
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select id="category-filter">
+                    <option value="">All categories</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Stationery">Stationery</option>
+                    <option value="Services">Services</option>
+                  </select>
+                </label>
+              </div>
+              <div id="product-grid" class="product-grid"></div>
+            </section>
+
+            <section class="panel cart-panel">
+              <div class="section-header compact-header">
+                <div>
+                  <h3>Cart</h3>
+                  <p>Review items before checkout.</p>
+                </div>
+                <button type="button" id="clear-cart-button" class="ghost-button">Clear cart</button>
+              </div>
+
+              <div id="cart-items" class="cart-items"></div>
+
+              <div class="checkout-box">
+                <div class="checkout-total">
+                  <span>Total</span>
+                  <strong id="cart-total">₹0.00</strong>
+                </div>
+
+                <label>
+                  <span>Payment method</span>
+                  <select id="payment-method">
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="UPI">UPI</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Customer name (optional)</span>
+                  <input id="customer-name" type="text" placeholder="Walk-in customer" />
+                </label>
+
+                <button type="button" id="complete-sale-button" class="primary-button full-width">Complete sale</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="sales-view" class="view-section">
+          <div class="section-header">
+            <div>
+              <h2>Sales History</h2>
+              <p>Track invoices, payment methods, and staff activity.</p>
+            </div>
+            <label class="inline-filter">
+              <span>Filter by date</span>
+              <input id="sales-date-filter" type="date" />
+            </label>
+          </div>
+          <div id="sales-list" class="panel list-panel"></div>
+        </section>
+
+        <section id="expenses-view" class="view-section">
+          <div class="split-layout">
+            <section class="panel">
+              <div class="section-header compact-header">
+                <div>
+                  <h2>Add Expense</h2>
+                  <p>Log operating costs for accurate daily summaries.</p>
+                </div>
+              </div>
+
+              <form id="expense-form" class="stack-form">
+                <label>
+                  <span>Description</span>
+                  <input name="description" type="text" placeholder="e.g. Printer ink refill" required />
+                </label>
+                <label>
+                  <span>Amount</span>
+                  <input name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required />
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select name="category" required>
+                    <option value="Rent">Rent</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Supplies">Supplies</option>
+                    <option value="Salary">Salary</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <button type="submit" class="primary-button">Save expense</button>
+              </form>
+            </section>
+
+            <section class="panel list-panel">
+              <div class="section-header compact-header">
+                <div>
+                  <h2>Expense Log</h2>
+                  <p>Recent expenses with staff details.</p>
+                </div>
+                <label class="inline-filter">
+                  <span>Filter by date</span>
+                  <input id="expenses-date-filter" type="date" />
+                </label>
+              </div>
+              <div id="expenses-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="products-view" class="view-section">
+          <div class="split-layout">
+            <section class="panel">
+              <div class="section-header compact-header">
+                <div>
+                  <h2>Product Management</h2>
+                  <p>Add or edit products, stock levels, and pricing.</p>
+                </div>
+              </div>
+
+              <form id="product-form" class="stack-form">
+                <input type="hidden" name="productId" />
+                <label>
+                  <span>Product name</span>
+                  <input name="name" type="text" placeholder="e.g. USB Cable" required />
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select name="category" required>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Stationery">Stationery</option>
+                    <option value="Services">Services</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Selling price</span>
+                  <input name="sellingPrice" type="number" min="0" step="0.01" required />
+                </label>
+                <label>
+                  <span>Cost price</span>
+                  <input name="costPrice" type="number" min="0" step="0.01" required />
+                </label>
+                <label>
+                  <span>Stock quantity</span>
+                  <input name="stockQuantity" type="number" min="0" step="1" required />
+                </label>
+                <div class="button-row">
+                  <button type="submit" class="primary-button">Save product</button>
+                  <button type="button" id="cancel-edit-button" class="secondary-button hidden">Cancel edit</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel list-panel">
+              <div class="section-header compact-header">
+                <div>
+                  <h2>Product Catalog</h2>
+                  <p>Current stock, pricing, and category details.</p>
+                </div>
+              </div>
+              <div id="products-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="reports-view" class="view-section">
+          <div class="split-layout">
+            <section class="panel">
+              <div class="section-header compact-header">
+                <div>
+                  <h2>Daily Summary</h2>
+                  <p>See sales, expenses, transactions, and cash in hand.</p>
+                </div>
+                <label class="inline-filter">
+                  <span>Date</span>
+                  <input id="summary-date" type="date" />
+                </label>
+              </div>
+
+              <div class="stats-grid" id="daily-summary-cards">
+                <article class="stat-card">
+                  <span>Total Sales</span>
+                  <strong id="summary-sales">₹0.00</strong>
+                </article>
+                <article class="stat-card">
+                  <span>Total Expenses</span>
+                  <strong id="summary-expenses">₹0.00</strong>
+                </article>
+                <article class="stat-card">
+                  <span>Transactions</span>
+                  <strong id="summary-transactions">0</strong>
+                </article>
+                <article class="stat-card">
+                  <span>Cash in Hand</span>
+                  <strong id="summary-cash">₹0.00</strong>
+                </article>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="section-header compact-header">
+                <div>
+                  <h2>Profit &amp; Loss</h2>
+                  <p>Track revenue, COGS, gross profit, expenses, and net profit.</p>
+                </div>
+              </div>
+
+              <form id="profit-loss-form" class="range-form">
+                <label>
+                  <span>Start date</span>
+                  <input name="startDate" id="profit-start-date" type="date" required />
+                </label>
+                <label>
+                  <span>End date</span>
+                  <input name="endDate" id="profit-end-date" type="date" required />
+                </label>
+                <button type="submit" class="primary-button">Load report</button>
+              </form>
+
+              <div class="stats-grid">
+                <article class="stat-card">
+                  <span>Total Revenue</span>
+                  <strong id="report-revenue">₹0.00</strong>
+                </article>
+                <article class="stat-card">
+                  <span>COGS</span>
+                  <strong id="report-cogs">₹0.00</strong>
+                </article>
+                <article class="stat-card">
+                  <span>Gross Profit</span>
+                  <strong id="report-gross">₹0.00</strong>
+                </article>
+                <article class="stat-card">
+                  <span>Total Expenses</span>
+                  <strong id="report-expenses">₹0.00</strong>
+                </article>
+                <article class="stat-card emphasis-card">
+                  <span>Net Profit</span>
+                  <strong id="report-net">₹0.00</strong>
+                </article>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/script.js" defer></script>
+  </body>
+</html>

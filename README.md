@@ -1,7 +1,27 @@
 # Small-shop-pos
 
-Small web based POS system to log sales and track inventory.
+A complete Point of Sale (POS) system for a small electronics and stationery shop with printing and lamination services.
 
-## Setup
+## Features
 
-Copy `.env.example` to `.env`, then replace the placeholder values with your Supabase project URL and publishable key before starting the app.
+- JWT-based login with a seeded admin account
+- Product catalog and stock management
+- POS cart with invoice generation and payment tracking
+- Sales history with date filters
+- Expense management
+- Daily summary and profit/loss reports
+- SQLite local database with sample products
+
+## Default Login
+
+- **Username:** `admin`
+- **Password:** `admin123`
+
+## Run locally
+
+```bash
+npm install
+npm start
+```
+
+Open `http://localhost:3000` in your browser.

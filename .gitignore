@@ -8,6 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+pos-system.db
+pos-system.db-shm
+pos-system.db-wal
 dist
 dist-ssr
 .env

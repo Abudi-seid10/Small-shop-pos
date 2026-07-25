@@ -95,7 +95,13 @@ function seedUsers() {
     return
   }
 
-  const passwordHash = bcrypt.hashSync('admin123', 10)
+  const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123'
+
+  if (!process.env.DEFAULT_ADMIN_PASSWORD) {
+    console.warn('DEFAULT_ADMIN_PASSWORD is not set. Seeding the documented default admin password.')
+  }
+
+  const passwordHash = bcrypt.hashSync(defaultAdminPassword, 10)
 
   db.prepare(
     `INSERT INTO users (username, password_hash, full_name, role)

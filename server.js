@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import express from 'express'
 import jwt from 'jsonwebtoken'
+import { randomBytes } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, initializeDatabase, recalculateDailySummary } from './database.js'
@@ -10,13 +11,21 @@ const __dirname = path.dirname(__filename)
 const publicDir = path.join(__dirname, 'public')
 const app = express()
 const port = Number(process.env.PORT) || 3000
-const jwtSecret = process.env.JWT_SECRET || 'small-shop-pos-local-secret'
+const generatedJwtSecret = randomBytes(32).toString('hex')
+const jwtSecret = process.env.JWT_SECRET || generatedJwtSecret
 const jwtExpiry = '24h'
 const productCategories = new Set(['Electronics', 'Stationery', 'Services'])
 const expenseCategories = new Set(['Rent', 'Utilities', 'Supplies', 'Salary', 'Other'])
 const paymentMethods = new Set(['Cash', 'Card', 'UPI'])
+const pageRateLimit = createRateLimiter({ windowMs: 60_000, maxRequests: 120 })
+const apiRateLimit = createRateLimiter({ windowMs: 60_000, maxRequests: 300 })
+const loginRateLimit = createRateLimiter({ windowMs: 15 * 60_000, maxRequests: 20 })
 
 initializeDatabase()
+
+if (!process.env.JWT_SECRET) {
+  console.warn('JWT_SECRET is not set. Generated a temporary in-memory secret for this session.')
+}
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
@@ -26,15 +35,15 @@ app.use((req, res, next) => {
 })
 app.use(express.static(publicDir))
 
-app.get('/', (_req, res) => {
+app.get('/', pageRateLimit, (_req, res) => {
   res.sendFile(path.join(publicDir, 'login.html'))
 })
 
-app.get('/login', (_req, res) => {
+app.get('/login', pageRateLimit, (_req, res) => {
   res.sendFile(path.join(publicDir, 'login.html'))
 })
 
-app.get('/dashboard', (_req, res) => {
+app.get('/dashboard', pageRateLimit, (_req, res) => {
   res.sendFile(path.join(publicDir, 'dashboard.html'))
 })
 
@@ -42,6 +51,33 @@ function createHttpError(status, message) {
   const error = new Error(message)
   error.status = status
   return error
+}
+
+function createRateLimiter({ windowMs, maxRequests }) {
+  const requestLog = new Map()
+
+  return (req, res, next) => {
+    const now = Date.now()
+    const key = `${req.ip}:${req.path}`
+    const existingEntry = requestLog.get(key)
+    const recentRequests = (existingEntry ?? []).filter((timestamp) => now - timestamp < windowMs)
+
+    if (recentRequests.length >= maxRequests) {
+      const message = 'Too many requests. Please try again shortly.'
+
+      if (req.path.startsWith('/api')) {
+        res.status(429).json({ message })
+        return
+      }
+
+      res.status(429).type('text/plain').send(message)
+      return
+    }
+
+    recentRequests.push(now)
+    requestLog.set(key, recentRequests)
+    next()
+  }
 }
 
 function isValidDate(value) {
@@ -260,7 +296,7 @@ function generateInvoiceNumber() {
   return `${prefix}${nextSequence}`
 }
 
-app.post('/api/login', (req, res, next) => {
+app.post('/api/login', loginRateLimit, (req, res, next) => {
   try {
     const username = requireString(req.body.username, 'Username').toLowerCase()
     const password = requireString(req.body.password, 'Password')
@@ -286,7 +322,7 @@ app.post('/api/login', (req, res, next) => {
   }
 })
 
-app.get('/api/products', authenticate, (req, res, next) => {
+app.get('/api/products', apiRateLimit, authenticate, (req, res, next) => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
     const category = typeof req.query.category === 'string' ? req.query.category.trim() : ''
@@ -323,7 +359,7 @@ app.get('/api/products', authenticate, (req, res, next) => {
   }
 })
 
-app.post('/api/products', authenticate, (req, res, next) => {
+app.post('/api/products', apiRateLimit, authenticate, (req, res, next) => {
   try {
     const name = requireString(req.body.name, 'Name')
     const category = requireAllowedValue(req.body.category, 'Category', productCategories)
@@ -348,7 +384,7 @@ app.post('/api/products', authenticate, (req, res, next) => {
   }
 })
 
-app.put('/api/products/:id', authenticate, (req, res, next) => {
+app.put('/api/products/:id', apiRateLimit, authenticate, (req, res, next) => {
   try {
     const productId = requireWholeNumber(req.params.id, 'Product ID')
     const existingProduct = db.prepare('SELECT id FROM products WHERE id = ?').get(productId)
@@ -379,7 +415,7 @@ app.put('/api/products/:id', authenticate, (req, res, next) => {
   }
 })
 
-app.post('/api/sales', authenticate, (req, res, next) => {
+app.post('/api/sales', apiRateLimit, authenticate, (req, res, next) => {
   try {
     const items = Array.isArray(req.body.items) ? req.body.items : []
 
@@ -473,7 +509,7 @@ app.post('/api/sales', authenticate, (req, res, next) => {
   }
 })
 
-app.get('/api/sales', authenticate, (req, res, next) => {
+app.get('/api/sales', apiRateLimit, authenticate, (req, res, next) => {
   try {
     res.json(buildSalesResponse(req.query))
   } catch (error) {
@@ -481,7 +517,7 @@ app.get('/api/sales', authenticate, (req, res, next) => {
   }
 })
 
-app.post('/api/expenses', authenticate, (req, res, next) => {
+app.post('/api/expenses', apiRateLimit, authenticate, (req, res, next) => {
   try {
     const description = requireString(req.body.description, 'Description')
     const amount = requirePositiveAmount(req.body.amount, 'Amount')
@@ -512,7 +548,7 @@ app.post('/api/expenses', authenticate, (req, res, next) => {
   }
 })
 
-app.get('/api/expenses', authenticate, (req, res, next) => {
+app.get('/api/expenses', apiRateLimit, authenticate, (req, res, next) => {
   try {
     const filter = getDateFilter('e.timestamp', req.query)
     const expenses = db
@@ -531,7 +567,7 @@ app.get('/api/expenses', authenticate, (req, res, next) => {
   }
 })
 
-app.get('/api/reports/daily-summary', authenticate, (req, res, next) => {
+app.get('/api/reports/daily-summary', apiRateLimit, authenticate, (req, res, next) => {
   try {
     const date = normalizeDate(req.query.date, 'date') ?? getToday()
     const summary = recalculateDailySummary(date)
@@ -551,7 +587,7 @@ app.get('/api/reports/daily-summary', authenticate, (req, res, next) => {
   }
 })
 
-app.get('/api/reports/profit-loss', authenticate, (req, res, next) => {
+app.get('/api/reports/profit-loss', apiRateLimit, authenticate, (req, res, next) => {
   try {
     const startDate = normalizeDate(req.query.startDate, 'startDate') ?? getToday()
     const endDate = normalizeDate(req.query.endDate, 'endDate') ?? startDate

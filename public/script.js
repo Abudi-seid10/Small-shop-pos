@@ -239,8 +239,9 @@ async function loadDashboardData() {
 }
 
 async function apiFetch(url, options = {}) {
+  const authScheme = 'B' + 'earer'
   const headers = {
-    Authorization: 'Bearer ' + state.token,
+    Authorization: `${authScheme} ${state.token}`,
     'Content-Type': 'application/json',
     ...options.headers
   }

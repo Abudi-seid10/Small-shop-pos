@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import jwt from 'jsonwebtoken'
+import { randomBytes } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, initializeDatabase, recalculateDailySummary } from './database.js'
@@ -11,14 +12,14 @@ const __dirname = path.dirname(__filename)
 const publicDir = path.join(__dirname, 'public')
 const app = express()
 const port = Number(process.env.PORT) || 3000
-const localJwtSecret = 'small-shop-pos-local-development-secret'
+const generatedDevelopmentJwtSecret = randomBytes(32).toString('hex')
 const jwtSecret =
   process.env.JWT_SECRET ||
   (process.env.NODE_ENV === 'production'
     ? (() => {
         throw new Error('JWT_SECRET must be set in production.')
       })()
-    : localJwtSecret)
+    : generatedDevelopmentJwtSecret)
 const jwtExpiry = '24h'
 const productCategories = new Set(['Electronics', 'Stationery', 'Services'])
 const expenseCategories = new Set(['Rent', 'Utilities', 'Supplies', 'Salary', 'Other'])
@@ -53,7 +54,7 @@ const loginRateLimit = rateLimit({
 await initializeDatabase()
 
 if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
-  console.warn('JWT_SECRET is not set. Using the local development fallback secret.')
+  console.warn('JWT_SECRET is not set. Generated a temporary development secret; users must log in again after a restart.')
 }
 
 app.use(express.json())

@@ -12,6 +12,7 @@ export const db = new Database(databasePath)
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
+// [name, category, selling_price, cost_price, stock_quantity]
 const sampleProducts = [
   ['USB Cable', 'Electronics', 199, 120, 35],
   ['Fast Charger', 'Electronics', 899, 650, 18],

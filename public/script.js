@@ -1,8 +1,8 @@
-const TOKEN_KEY = 'small-shop-pos-token'
-const USER_KEY = 'small-shop-pos-user'
+const LOCAL_STORAGE_TOKEN_KEY = 'small-shop-pos-token'
+const LOCAL_STORAGE_USER_KEY = 'small-shop-pos-user'
 
 const state = {
-  token: localStorage.getItem(TOKEN_KEY),
+  token: localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY),
   user: readStoredUser(),
   products: [],
   cart: [],
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function readStoredUser() {
   try {
-    const value = localStorage.getItem(USER_KEY)
+    const value = localStorage.getItem(LOCAL_STORAGE_USER_KEY)
     return value ? JSON.parse(value) : null
   } catch {
     return null
@@ -63,8 +63,8 @@ function initializeLoginPage() {
 
       state.token = payload.token
       state.user = payload.user
-      localStorage.setItem(TOKEN_KEY, payload.token)
-      localStorage.setItem(USER_KEY, JSON.stringify(payload.user))
+      localStorage.setItem(LOCAL_STORAGE_TOKEN_KEY, payload.token)
+      localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(payload.user))
       window.location.replace('/dashboard.html')
     } catch (error) {
       showMessage('error', error.message || 'Unable to sign in.')
@@ -219,8 +219,8 @@ function bindReportFilters() {
 
 function bindLogout() {
   document.getElementById('logout-button').addEventListener('click', () => {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY)
+    localStorage.removeItem(LOCAL_STORAGE_USER_KEY)
     state.token = null
     state.user = null
     state.cart = []
@@ -249,8 +249,8 @@ async function apiFetch(url, options = {}) {
   const payload = await parseJsonResponse(response)
 
   if (response.status === 401) {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY)
+    localStorage.removeItem(LOCAL_STORAGE_USER_KEY)
     window.location.replace('/login.html')
     throw new Error(payload.message || 'Please sign in again.')
   }

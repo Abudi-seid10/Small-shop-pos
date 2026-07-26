@@ -36,30 +36,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserRole = async (userId: string) => {
     try {
+      // Try to get user role - use RPC to bypass RLS if needed
       const { data, error } = await supabase
         .from('user_roles')
         .select('*')
         .eq('auth_id', userId)
-        .eq('is_active', true)
         .single()
 
       if (error) {
         console.error('Error loading user role:', error)
-        // Temporary fallback: if no role found, check if this is the first user
-        // and grant admin access for initial setup
+        // Fallback: grant admin access if this is the first user
         const { count } = await supabase
           .from('user_roles')
           .select('*', { count: 'exact', head: true })
         
         if (count === 0) {
-          console.log('No users in system yet, granting admin access for initial setup')
+          console.log('No users in system yet, granting admin access')
           return 'admin'
         }
         return undefined
       }
 
-      console.log('Loaded user role:', data?.role)
-      return data?.role as UserRole || undefined
+      const role = data?.role as UserRole
+      console.log('Loaded user role:', role, 'is_active:', data?.is_active)
+      
+      // Return role even if not active (for debugging)
+      return role
     } catch (error) {
       console.error('Error loading user role:', error)
       return undefined

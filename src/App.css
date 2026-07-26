@@ -1,3 +1,14 @@
+:root {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --accent: #2563eb;
+  --muted: #64748b;
+  --text: #0f172a;
+  --button-background: #f1f5f9;
+  --list-item: #f8fafc;
+}
+
 /* Loading Screen */
 .loading-screen {
   min-height: 100vh;

@@ -10,7 +10,7 @@ SELECT id, email FROM auth.users WHERE email = 'your-email@example.com';
 SELECT ur.*, au.email 
 FROM user_roles ur 
 JOIN auth.users au ON ur.auth_id = au.id 
-WHERE au.email = 'your-email@example.com';
+WHERE au.email = 'admin@time.com';
 
 -- Step 3: If no role exists, insert it
 -- Replace 'YOUR_USER_ID_HERE' with the actual UUID from step 1
@@ -18,10 +18,10 @@ WHERE au.email = 'your-email@example.com';
 -- Replace '+1234567890' with your phone number (optional)
 
 INSERT INTO user_roles (auth_id, role, full_name, phone, is_active) VALUES
-('YOUR_USER_ID_HERE', 'admin', 'Admin Name', '+1234567890', true);
+('a4296336-0bd2-4d50-97e7-9c2353865693', 'admin', 'Admin Name', '+1234567890', true);
 
 -- Step 4: Verify the insertion
 SELECT ur.*, au.email 
 FROM user_roles ur 
 JOIN auth.users au ON ur.auth_id = au.id 
-WHERE au.email = 'your-email@example.com';
+WHERE au.email = 'admin@time.com';

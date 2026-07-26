@@ -1,27 +1,28 @@
 {
   "name": "small-shop-pos",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
+  "description": "POS system for a small electronics and stationery shop",
+  "main": "server.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "oxlint ."
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.11.0"
+    "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
     "oxlint": "^1.71.0",
-    "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7"
   }
 }

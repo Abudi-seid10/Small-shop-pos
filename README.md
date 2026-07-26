@@ -1,5 +1,6 @@
 # Small Shop POS
 
+<<<<<<< HEAD
 A comprehensive Point of Sale (POS) system for small retail businesses. Built with React, TypeScript, Vite, and Supabase.
 
 ## Features
@@ -13,9 +14,13 @@ A comprehensive Point of Sale (POS) system for small retail businesses. Built wi
 - **Mobile Responsive**: Touch-friendly interface optimized for tablets and phones
 - **Barcode Scanning**: Manual barcode entry for quick product lookup
 - **Tax Calculations**: Automatic GST/tax calculations per product
+=======
+A complete Point of Sale (POS) system for a small electronics and stationery shop with printing and lamination services.
+>>>>>>> 21e55816585e3c6b5ab2fbfe2e1838b3a77134ba
 
-## Setup
+## Features
 
+<<<<<<< HEAD
 ### Prerequisites
 
 - Node.js (v18 or higher)
@@ -143,3 +148,26 @@ Alternatively, you can use the provided `create-admin.sql` file which contains t
 ## License
 
 MIT
+=======
+- JWT-based login with a seeded admin account
+- Product catalog and stock management
+- POS cart with invoice generation and payment tracking
+- Sales history with date filters
+- Expense management
+- Daily summary and profit/loss reports
+- SQLite local database with sample products
+
+## Default Login
+
+- **Username:** `admin`
+- **Password:** `admin123`
+
+## Run locally
+
+```bash
+npm install
+npm start
+```
+
+Open `http://localhost:3000` in your browser.
+>>>>>>> 21e55816585e3c6b5ab2fbfe2e1838b3a77134ba
